@@ -17,7 +17,7 @@ material_uncertainty = st.sidebar.slider("Material Cost Uncertainty (%)", min_va
 st.sidebar.subheader("⏱️ Labor Estimates")
 machining_hours = st.sidebar.number_input("Machining Time (hours)", min_value=1.0, max_value=500.0, value=35.0, step=1.0)
 labor_uncertainty = st.sidebar.slider("Labor Time Uncertainty (%)", min_value=10, max_value=50, value=20)
-labor_rate = st.sidebar.number_input("Labor Rate ($/hr)", min_value=30, max_value=200, value=75, step=5)
+labor_rate = st.sidebar.number_input("Labor Rate ($/hr)", min_value=7, max_value=200, value=75, step=5)
 
 st.sidebar.subheader("📈 Business Factors")
 overhead_multiplier = st.sidebar.number_input("Overhead Multiplier", min_value=1.0, max_value=3.0, value=1.35, step=0.05)
@@ -104,3 +104,4 @@ else:
 
 st.markdown("---")
 st.markdown("*Monte Carlo simulation with 10,000 iterations*")
+
