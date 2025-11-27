@@ -1,12 +1,9 @@
 import streamlit as st
 import numpy as np
 import pandas as pd
-from io import BytesIO
-from reportlab.lib.pagesizes import letter
-from reportlab.lib import colors
-from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
-from reportlab.lib.styles import getSampleStyleSheet
+from fpdf import FPDF
 from datetime import datetime
+import io
 
 st.set_page_config(page_title="Manufacturing Quote Risk Analyzer", page_icon="🔧", layout="wide")
 
@@ -42,104 +39,85 @@ profit_margin = st.sidebar.number_input("Profit Margin Multiplier", min_value=1.
 
 n_simulations = 10000
 
-# Function to generate PDF
+# PDF Generation Function
 def generate_pdf(job_name, results):
-    buffer = BytesIO()
-    doc = SimpleDocTemplate(buffer, pagesize=letter)
-    elements = []
-    styles = getSampleStyleSheet()
+    pdf = FPDF()
+    pdf.add_page()
+    pdf.set_font("Arial", "B", 16)
     
     # Title
-    title = Paragraph(f"<b>Manufacturing Quote Risk Analysis Report</b>", styles['Title'])
-    elements.append(title)
-    elements.append(Spacer(1, 12))
+    pdf.cell(0, 10, "Manufacturing Quote Risk Analysis Report", ln=True, align="C")
+    pdf.ln(10)
     
-    # Job info
+    # Job Info
+    pdf.set_font("Arial", "", 12)
     if job_name:
-        job_info = Paragraph(f"<b>Job Name:</b> {job_name}", styles['Normal'])
-        elements.append(job_info)
-    
-    date_info = Paragraph(f"<b>Date Generated:</b> {datetime.now().strftime('%Y-%m-%d %H:%M')}", styles['Normal'])
-    elements.append(date_info)
-    elements.append(Spacer(1, 20))
+        pdf.cell(0, 10, f"Job Name: {job_name}", ln=True)
+    pdf.cell(0, 10, f"Date: {datetime.now().strftime('%Y-%m-%d %H:%M')}", ln=True)
+    pdf.ln(10)
     
     # Key Results
-    heading = Paragraph("<b>Key Results</b>", styles['Heading2'])
-    elements.append(heading)
-    elements.append(Spacer(1, 12))
+    pdf.set_font("Arial", "B", 14)
+    pdf.cell(0, 10, "Key Results", ln=True)
+    pdf.set_font("Arial", "", 12)
+    pdf.ln(5)
     
-    data = [
-        ['Metric', 'Value'],
-        ['Expected Cost', f"${results['mean']:,.0f}"],
-        ['Median (50%)', f"${results['median']:,.0f}"],
-        ['Conservative (75%)', f"${results['p75']:,.0f}"],
-        ['High Confidence (90%)', f"${results['p90']:,.0f}"],
-    ]
+    pdf.cell(90, 10, "Expected Cost:", border=1)
+    pdf.cell(0, 10, f"${results['mean']:,.0f}", border=1, ln=True)
     
-    table = Table(data, colWidths=[250, 150])
-    table.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
-        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
-        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-        ('FONTSIZE', (0, 0), (-1, 0), 12),
-        ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
-        ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
-        ('GRID', (0, 0), (-1, -1), 1, colors.black)
-    ]))
-    elements.append(table)
-    elements.append(Spacer(1, 20))
+    pdf.cell(90, 10, "Median (50%):", border=1)
+    pdf.cell(0, 10, f"${results['median']:,.0f}", border=1, ln=True)
+    
+    pdf.cell(90, 10, "Conservative (75%):", border=1)
+    pdf.cell(0, 10, f"${results['p75']:,.0f}", border=1, ln=True)
+    
+    pdf.cell(90, 10, "High Confidence (90%):", border=1)
+    pdf.cell(0, 10, f"${results['p90']:,.0f}", border=1, ln=True)
+    
+    pdf.ln(10)
     
     # Recommendations
-    heading = Paragraph("<b>Quoting Recommendations</b>", styles['Heading2'])
-    elements.append(heading)
-    elements.append(Spacer(1, 12))
+    pdf.set_font("Arial", "B", 14)
+    pdf.cell(0, 10, "Quoting Recommendations", ln=True)
+    pdf.set_font("Arial", "", 11)
+    pdf.ln(5)
     
-    comp_rec = Paragraph(f"<b>Competitive Quote (50% confidence):</b> ${results['median']:,.0f}<br/>Use for competitive bidding and repeat customers.", styles['Normal'])
-    elements.append(comp_rec)
-    elements.append(Spacer(1, 12))
+    pdf.multi_cell(0, 8, f"COMPETITIVE QUOTE (50% confidence): ${results['median']:,.0f}\nUse for competitive bidding and repeat customers.\nRisk: 50/50 chance of cost overrun.")
+    pdf.ln(5)
     
-    cons_rec = Paragraph(f"<b>Conservative Quote (75% confidence):</b> ${results['p75']:,.0f}<br/>Use for new customers and complex jobs. Risk premium: ${results['p75'] - results['median']:,.0f}", styles['Normal'])
-    elements.append(cons_rec)
-    elements.append(Spacer(1, 20))
+    pdf.multi_cell(0, 8, f"CONSERVATIVE QUOTE (75% confidence): ${results['p75']:,.0f}\nUse for new customers and complex jobs.\nRisk premium: ${results['p75'] - results['median']:,.0f}")
+    pdf.ln(10)
     
-    # Detailed stats
-    heading = Paragraph("<b>Detailed Statistics</b>", styles['Heading2'])
-    elements.append(heading)
-    elements.append(Spacer(1, 12))
+    # Detailed Statistics
+    pdf.set_font("Arial", "B", 14)
+    pdf.cell(0, 10, "Detailed Statistics", ln=True)
+    pdf.set_font("Arial", "", 12)
+    pdf.ln(5)
     
-    stats_data = [
-        ['Percentile', 'Quote Price'],
-        ['10th', f"${results['p10']:,.0f}"],
-        ['25th', f"${results['p25']:,.0f}"],
-        ['50th (Median)', f"${results['median']:,.0f}"],
-        ['75th', f"${results['p75']:,.0f}"],
-        ['90th', f"${results['p90']:,.0f}"],
-    ]
+    pdf.cell(90, 10, "10th Percentile:", border=1)
+    pdf.cell(0, 10, f"${results['p10']:,.0f}", border=1, ln=True)
     
-    stats_table = Table(stats_data, colWidths=[200, 150])
-    stats_table.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
-        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
-        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-        ('FONTSIZE', (0, 0), (-1, 0), 12),
-        ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
-        ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
-        ('GRID', (0, 0), (-1, -1), 1, colors.black)
-    ]))
-    elements.append(stats_table)
+    pdf.cell(90, 10, "25th Percentile:", border=1)
+    pdf.cell(0, 10, f"${results['p25']:,.0f}", border=1, ln=True)
+    
+    pdf.cell(90, 10, "50th Percentile (Median):", border=1)
+    pdf.cell(0, 10, f"${results['median']:,.0f}", border=1, ln=True)
+    
+    pdf.cell(90, 10, "75th Percentile:", border=1)
+    pdf.cell(0, 10, f"${results['p75']:,.0f}", border=1, ln=True)
+    
+    pdf.cell(90, 10, "90th Percentile:", border=1)
+    pdf.cell(0, 10, f"${results['p90']:,.0f}", border=1, ln=True)
+    
+    pdf.ln(15)
     
     # Footer
-    elements.append(Spacer(1, 30))
-    footer = Paragraph("<i>Generated by Manufacturing Quote Risk Analyzer - Monte Carlo simulation with 10,000 iterations</i>", styles['Normal'])
-    elements.append(footer)
+    pdf.set_font("Arial", "I", 10)
+    pdf.cell(0, 10, "Generated by Manufacturing Quote Risk Analyzer - Monte Carlo simulation (10,000 iterations)", align="C")
     
-    doc.build(elements)
-    buffer.seek(0)
-    return buffer
+    return pdf.output(dest='S').encode('latin-1')
 
-# Main app logic
+# Main App Logic
 if st.sidebar.button("🚀 Run Risk Analysis", type="primary"):
     
     with st.spinner("Running Monte Carlo simulation..."):
@@ -183,7 +161,7 @@ if st.sidebar.button("🚀 Run Risk Analysis", type="primary"):
         p75 = np.percentile(total_quote, 75)
         p90 = np.percentile(total_quote, 90)
         
-        # Store results for PDF
+        # Store results
         results = {
             'mean': mean_cost,
             'median': median_cost,
@@ -193,7 +171,6 @@ if st.sidebar.button("🚀 Run Risk Analysis", type="primary"):
             'p90': p90
         }
         
-        # Store in session state
         st.session_state['results'] = results
         st.session_state['total_quote'] = total_quote
         
@@ -236,13 +213,14 @@ if st.sidebar.button("🚀 Run Risk Analysis", type="primary"):
     })
     st.dataframe(stats_df, use_container_width=True, hide_index=True)
     
-    # PDF Download Button
+    # PDF Download
     st.subheader("📄 Export Report")
-    pdf_buffer = generate_pdf(job_name if job_name else "Untitled Job", results)
+    pdf_bytes = generate_pdf(job_name if job_name else "Untitled Job", results)
+    
     st.download_button(
         label="⬇ Download PDF Report",
-        data=pdf_buffer,
-        file_name=f"risk_analysis_{job_name if job_name else 'report'}_{datetime.now().strftime('%Y%m%d')}.pdf",
+        data=pdf_bytes,
+        file_name=f"risk_analysis_{job_name.replace(' ', '') if job_name else 'report'}{datetime.now().strftime('%Y%m%d')}.pdf",
         mime="application/pdf",
         type="primary"
     )
@@ -254,10 +232,16 @@ else:
     ### How to Use:
     
     1. Enter job parameters in sidebar
-    2. Optionally add a job name for the report
+    2. Optionally add a job name
     3. Click 'Run Risk Analysis'
-    4. Review results and download PDF report
+    4. Download professional PDF report
+    
+    ### Features:
+    - ✅ Monte Carlo simulation (10,000 iterations)
+    - ✅ Multiple confidence levels
+    - ✅ Professional PDF reports
+    - ✅ Conservative & competitive quotes
     """)
 
 st.markdown("---")
-st.markdown("Monte Carlo simulation with 10,000 iterations")
+st.markdown("Manufacturing Quote Risk Analyzer v2.0")
