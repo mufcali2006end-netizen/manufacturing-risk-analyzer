@@ -218,8 +218,24 @@ if st.sidebar.button("🚀 Run Risk Analysis", type="primary"):
     
     # Distribution chart
     st.subheader("📈 Cost Distribution")
-    chart_df = pd.DataFrame({'Quote Price': total_quote})
-    st.bar_chart(chart_df['Quote Price'].value_counts().sort_index().head(50), height=400)
+
+    # Create histogram bins
+    hist_values, bin_edges = np.histogram(total_quote, bins=50)
+    bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2
+
+    # Create dataframe for chart
+    hist_df = pd.DataFrame({'Cost Range' : [f"${int(x):,}" for x in bin_centers],})
+
+    st.bar_chart(hist_df.set_index('Cost Range')['Frequency'],
+
+    # Add summary stats below chart
+    col_a, col_b, col_c = st.columns(3)
+    with col_a:
+        st.metric("Minimum", f"${total_quote.min():,.0f}")
+    with col_b:
+        st.metric("Average", f"${total_quote.mean():,.0f}")
+    with col_c:
+        st.metric("Maximum", f"${total_quote.max():,.0f}")
     
     # Recommendations
     st.subheader("💡 Quoting Recommendations")
@@ -288,3 +304,4 @@ else:
 
 st.markdown("---")
 st.markdown("Manufacturing Quote Risk Analyzer v2.1 | Built with Monte Carlo simulation")
+
