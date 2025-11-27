@@ -244,4 +244,5 @@ else:
     """)
 
 st.markdown("---")
-st.markdown("Manufacturing Quote Risk Analyzer v2.0")
+st.markdown("Manufacturing Quote Risk Analyzer v2.1")
+
