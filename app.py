@@ -224,9 +224,9 @@ if st.sidebar.button("🚀 Run Risk Analysis", type="primary"):
     bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2
 
     # Create dataframe for chart
-    hist_df = pd.DataFrame({'Cost Range' : [f"${int(x):,}" for x in bin_centers],})
+    hist_df = pd.DataFrame({'Cost Range' : [f"${int(x):,}" for x in bin_centers],'Frequency': hist_values})
 
-    st.bar_chart(hist_df.set_index('Cost Range')['Frequency'],
+    st.bar_chart(hist_df.set_index('Cost Range')['Frequency'], height=400)
 
     # Add summary stats below chart
     col_a, col_b, col_c = st.columns(3)
@@ -304,4 +304,5 @@ else:
 
 st.markdown("---")
 st.markdown("Manufacturing Quote Risk Analyzer v2.1 | Built with Monte Carlo simulation")
+
 
