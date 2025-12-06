@@ -19,7 +19,7 @@ st.markdown("---")
 st.sidebar.title("🔧 Manufacturing Risk Analyzer")
 
 # Pro status (temporary checkbox for testing)
-is_pro = st.sidebar.checkbox("✨ I'm a Pro Subscriber", value=st.session_state['is_pro'])
+is_pro = st.sidebar.checkbox("👑 Pro Subscription", value=st.session_state['is_pro'])
 st.session_state['is_pro'] = is_pro
 
 if is_pro:
@@ -361,6 +361,7 @@ else:
 
 st.markdown("---")
 st.markdown("Manufacturing Quote Risk Analyzer v2.1 | Built with Monte Carlo simulation")
+
 
 
 
