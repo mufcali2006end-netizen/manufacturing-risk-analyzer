@@ -37,7 +37,7 @@ else:
         st.sidebar.markdown("✅ PDF reports with charts (coming soon)")
         st.sidebar.markdown("✅ Save scenarios")
         st.sidebar.markdown("✅ Priority support")
-        st.sidebar.markdown("[*Subscribe Now →*](https://buy.stripe.com/YOUR_LINK_HERE)")
+        st.sidebar.markdown("[*Subscribe Now →*](https://buy.stripe.com/dRm4gz7DW7bmaFSche8k800)")
         
 st.sidebar.markdown("---")
                  
@@ -173,7 +173,7 @@ if not can_run:
         st.markdown("- ✅ PDF reports with charts")
         st.markdown("- ✅ Save scenarios")
         st.markdown("- ✅ Priority support")
-    st.markdown("[*Subscribe to Pro →*](https://buy.stripe.com/YOUR_LINK_HERE)")
+    st.markdown("[*Subscribe to Pro →*](https://buy.stripe.com/dRm4gz7DW7bmaFSche8k800)")
     st.stop()
 
 # Main App Logic
@@ -361,6 +361,7 @@ else:
 
 st.markdown("---")
 st.markdown("Manufacturing Quote Risk Analyzer v2.1 | Built with Monte Carlo simulation")
+
 
 
 
