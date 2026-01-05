@@ -24,6 +24,9 @@ st.session_state['is_pro'] = is_pro
 
 if is_pro:
     st.sidebar.success("*PRO USER* - Unlimited analyses")
+    st.sidebar.markdown("---")
+    st.sidebar.caption("Need to cancel or update payment?")
+    st.sidebar.markdown("📧 Email: falconmanagementllc25@gmail.com")
 else:
     # Show free tier usage
     remaining = 3 - st.session_state['usage_count']
@@ -361,6 +364,7 @@ else:
 
 st.markdown("---")
 st.markdown("Manufacturing Quote Risk Analyzer v2.1 | Built with Monte Carlo simulation")
+
 
 
 
