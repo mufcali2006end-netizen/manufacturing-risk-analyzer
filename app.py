@@ -18,9 +18,31 @@ st.markdown("---")
 # Tier indicator at top of sidebar
 st.sidebar.title("🔧 Manufacturing Risk Analyzer")
 
-# Pro status (temporary checkbox for testing)
-is_pro = st.sidebar.checkbox("👑 Pro Subscription", value=st.session_state['is_pro'])
-st.session_state['is_pro'] = is_pro
+# Pro Access via Code
+st.sidebar.markdown("---")
+st.sidebar.subheader("✨ Pro Access")
+st.sidebar.caption("After subscribing, email falconmanagementllc25@gmail.com for your access code")
+
+pro_code = st.sidebar.text_input("Enter Pro Code:", type="password", key="pro_code_input")
+
+# Valid Pro codes - Add customer codes here as they subscribe
+VALID_PRO_CODES = [
+    "DEMO2025",  # For testing - remove after testing
+    # Add customer codes here like:
+    # "ACME-SHOP-JAN2025",
+    # "SMITH-TOOLS-2025",
+]
+
+if pro_code and pro_code in VALID_PRO_CODES:
+    st.session_state['is_pro'] = True
+    is_pro = True
+    st.sidebar.success("✅ Pro Activated!")
+    st.sidebar.caption("📧 Support: falconmanagementllc25@gmail.com")
+else:
+    st.session_state['is_pro'] = False
+    is_pro = False
+    if pro_code and pro_code not in VALID_PRO_CODES:
+        st.sidebar.error("❌ Invalid code")
 
 if is_pro:
     st.sidebar.success("*PRO USER* - Unlimited analyses")
@@ -364,6 +386,7 @@ else:
 
 st.markdown("---")
 st.markdown("Manufacturing Quote Risk Analyzer v2.1 | Built with Monte Carlo simulation")
+
 
 
 
