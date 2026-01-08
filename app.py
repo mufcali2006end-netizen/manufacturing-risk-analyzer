@@ -29,7 +29,7 @@ pro_code = st.sidebar.text_input("Enter Pro Code:", type="password", key="pro_co
 VALID_PRO_CODES = [
     "DEMO2025",  # For testing - remove after testing
     # Add customer codes here like:
-    # "ACME-SHOP-JAN2025",
+    "ACME-SHOP-JAN2025",
     # "SMITH-TOOLS-2025",
 ]
 
@@ -386,6 +386,7 @@ else:
 
 st.markdown("---")
 st.markdown("Manufacturing Quote Risk Analyzer v2.1 | Built with Monte Carlo simulation")
+
 
 
 
