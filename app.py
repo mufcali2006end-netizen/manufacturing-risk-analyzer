@@ -12,6 +12,10 @@ if 'is_pro' not in st.session_state:
 st.set_page_config(page_title="Manufacturing Quote Risk Analyzer", page_icon="🔧", layout="wide")
 
 st.title("🔧 Manufacturing Quote Risk Analyzer")
+
+# Browser compatibility notice
+st.info("💻 *Best viewed on desktop or laptop.* iPhone users: Please use Chrome or Firefox if you encounter errors.")
+
 st.markdown("*Get data-driven confidence intervals for your manufacturing quotes*")
 st.markdown("---")
 
@@ -386,6 +390,7 @@ else:
 
 st.markdown("---")
 st.markdown("Manufacturing Quote Risk Analyzer v2.1 | Built with Monte Carlo simulation")
+
 
 
 
