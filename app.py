@@ -4,7 +4,7 @@ import pandas as pd
 from datetime import datetime
 
 # Browser compatibility notice
-st.info("💻 *Best viewed on desktop or laptop.* iPhone users: Please use Chrome or Firefox if you encounter errors.")
+st.info("💻 **Works best viewed on desktop/laptop.** iPhone users: Please use Chrome or Firefox if you encounter issues on safari.")
 
 # Initialize session state for usage tracking
 if 'usage_count' not in st.session_state:
@@ -390,6 +390,7 @@ else:
 
 st.markdown("---")
 st.markdown("Manufacturing Quote Risk Analyzer v2.1 | Built with Monte Carlo simulation")
+
 
 
 
