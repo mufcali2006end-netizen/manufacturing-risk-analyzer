@@ -352,7 +352,7 @@ if not can_run:
     st.markdown("### 💳 Choose Your Plan")
 
     st.markdown("""
-    <div class="price-row">
+    <div class="price-row" style="grid-template-columns: 1fr 1fr; max-width: 700px; margin: 1.5rem auto;">
 
       <div class="price-card">
         <div class="plan-name">STARTER FREE</div>
@@ -366,7 +366,7 @@ if not can_run:
       </div>
 
       <div class="price-card hot">
-        <div class="hot-badge">MOST POPULAR</div>
+        <div class="hot-badge">UPGRADE</div>
         <div class="plan-name">PRO</div>
         <div class="plan-price">$49.99<span style="font-size:1rem;font-weight:400">/mo</span></div>
         <div class="plan-desc">For active shops</div>
@@ -376,18 +376,6 @@ if not can_run:
           <li>Save & compare scenarios</li>
           <li>Sensitivity / tornado chart</li>
           <li>Priority email support</li>
-        </ul>
-      </div>
-
-      <div class="price-card">
-        <div class="plan-name">ENTERPRISE</div>
-        <div class="plan-price" style="font-size:1.5rem">Custom</div>
-        <div class="plan-desc">Multi-user teams</div>
-        <ul>
-          <li>Everything in Pro</li>
-          <li>Team accounts</li>
-          <li>Custom integrations</li>
-          <li>Dedicated support</li>
         </ul>
       </div>
 
