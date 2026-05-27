@@ -2,40 +2,39 @@ import streamlit as st
 import numpy as np
 import pandas as pd
 from datetime import datetime
+import json
+import io
+
+# ── Page config must be FIRST ──────────────────────────────────────────────
+st.set_page_config(
+    page_title="Manufacturing Quote Risk Analyzer",
+    page_icon="🔧",
+    layout="wide"
+)
 
 # Browser compatibility notice
-st.warning("⚠️ *iPhone/iPad users:* iOS 17+ required. iOS 16 and older are not compatible. Please use a desktop/laptop or update your iOS.")
+st.warning("⚠️ *iPhone/iPad users:* iOS 17+ required. iOS 16 and older are not compatible.")
 
-# Initialize session state for usage tracking
+# ── Session state ───────────────────────────────────────────────────────────
 if 'usage_count' not in st.session_state:
     st.session_state['usage_count'] = 0
 if 'is_pro' not in st.session_state:
     st.session_state['is_pro'] = False
+if 'saved_scenarios' not in st.session_state:
+    st.session_state['saved_scenarios'] = {}   # PRO FEATURE 2
 
-st.set_page_config(page_title="Manufacturing Quote Risk Analyzer", page_icon="🔧", layout="wide")
+# ── Pro code check ──────────────────────────────────────────────────────────
+VALID_PRO_CODES = [
+    "DEMO2025",
+    "ACME-SHOP-JAN2025",
+]
 
-st.title("🔧 Manufacturing Quote Risk Analyzer")
-
-st.markdown("*Get data-driven confidence intervals for your manufacturing quotes*")
-st.markdown("---")
-
-# Tier indicator at top of sidebar
 st.sidebar.title("🔧 Manufacturing Risk Analyzer")
-
-# Pro Access via Code
 st.sidebar.markdown("---")
 st.sidebar.subheader("✨ Pro Access")
 st.sidebar.caption("After subscribing, email falconmanagementllc25@gmail.com for your access code")
 
 pro_code = st.sidebar.text_input("Enter Pro Code:", type="password", key="pro_code_input")
-
-# Valid Pro codes - Add customer codes here as they subscribe
-VALID_PRO_CODES = [
-    "DEMO2025",  # For testing - remove after testing
-    # Add customer codes here like:
-    "ACME-SHOP-JAN2025",
-    # "SMITH-TOOLS-2025",
-]
 
 if pro_code and pro_code in VALID_PRO_CODES:
     st.session_state['is_pro'] = True
@@ -49,62 +48,103 @@ else:
         st.sidebar.error("❌ Invalid code")
 
 if is_pro:
-    st.sidebar.success("*PRO USER* - Unlimited analyses")
+    st.sidebar.success("**PRO USER** — Unlimited analyses")
     st.sidebar.markdown("---")
     st.sidebar.caption("Need to cancel or update payment?")
     st.sidebar.markdown("📧 Email: falconmanagementllc25@gmail.com")
 else:
-    # Show free tier usage
-    remaining = 3 - st.session_state['usage_count']
+    remaining = max(0, 3 - st.session_state['usage_count'])
     if remaining > 0:
-        st.sidebar.info(f"🆓 *Free Trial:* {remaining}/3 analyses remaining")
+        st.sidebar.info(f"🆓 **Free Trial:** {remaining}/3 analyses remaining")
     else:
-        st.sidebar.error("⚠ *Free limit reached!*")
-        st.sidebar.markdown("### Upgrade to Pro")
-        st.sidebar.markdown("$49.99/month**")
+        st.sidebar.error("⚠ **Free limit reached!**")
+        st.sidebar.markdown("**Upgrade to Pro — $49.99/mo**")
         st.sidebar.markdown("✅ Unlimited analyses")
-        st.sidebar.markdown("✅ PDF reports with charts (coming soon)")
-        st.sidebar.markdown("✅ Save scenarios")
-        st.sidebar.markdown("✅ Priority support")
-        st.sidebar.markdown("[*Subscribe Now →*](https://buy.stripe.com/dRm4gz7DW7bmaFSche8k800)")
-        
-st.sidebar.markdown("---")
-                 
-# Sidebar inputs
-st.sidebar.header("📊 Job Parameters")
+        st.sidebar.markdown("✅ PDF reports with charts")
+        st.sidebar.markdown("✅ Save & compare scenarios")
+        st.sidebar.markdown("✅ Sensitivity tornado chart")
+        st.sidebar.link_button("🚀 Subscribe Now →",
+            "https://buy.stripe.com/dRm4gz7DW7bmaFSche8k800",
+            use_container_width=True)
 
+st.sidebar.markdown("---")
+
+# ── Sidebar inputs ──────────────────────────────────────────────────────────
+st.sidebar.header("📊 Job Parameters")
 job_name = st.sidebar.text_input("Job Name (optional)", placeholder="e.g., Bracket-2024-001")
 
 st.sidebar.subheader("💰 Material Costs")
-material_cost = st.sidebar.number_input("Base Material Cost ($)", min_value=100, max_value=50000, value=3500, step=100)
-material_uncertainty = st.sidebar.slider("Material Cost Uncertainty (%)", min_value=5, max_value=40, value=12)
-waste_pct = st.sidebar.slider("Expected Material Waste (%)", min_value=5, max_value=30, value=10)
+material_cost       = st.sidebar.number_input("Base Material Cost ($)", min_value=100, max_value=50000, value=3500, step=100)
+material_uncertainty= st.sidebar.slider("Material Cost Uncertainty (%)", min_value=5, max_value=40, value=12)
+waste_pct           = st.sidebar.slider("Expected Material Waste (%)", min_value=5, max_value=30, value=10)
 
 st.sidebar.subheader("⏱ Labor Estimates")
-setup_hours = st.sidebar.number_input("Setup Time (hours)", min_value=0.5, max_value=40.0, value=4.0, step=0.5)
+setup_hours     = st.sidebar.number_input("Setup Time (hours)",     min_value=0.5, max_value=40.0,  value=4.0,  step=0.5)
 machining_hours = st.sidebar.number_input("Machining Time (hours)", min_value=1.0, max_value=500.0, value=35.0, step=1.0)
-finishing_hours = st.sidebar.number_input("Finishing Time (hours)", min_value=0.5, max_value=40.0, value=5.0, step=0.5)
-labor_uncertainty = st.sidebar.slider("Labor Time Uncertainty (%)", min_value=10, max_value=50, value=20)
-labor_rate = st.sidebar.number_input("Labor Rate ($/hr)", min_value=30, max_value=200, value=75, step=5)
+finishing_hours = st.sidebar.number_input("Finishing Time (hours)", min_value=0.5, max_value=40.0,  value=5.0,  step=0.5)
+labor_uncertainty   = st.sidebar.slider("Labor Time Uncertainty (%)", min_value=10, max_value=50, value=20)
+labor_rate          = st.sidebar.number_input("Labor Rate ($/hr)", min_value=30, max_value=200, value=75, step=5)
 
 st.sidebar.subheader("🔩 Other Costs")
-tooling_cost = st.sidebar.number_input("Tooling/Consumables ($)", min_value=50, max_value=5000, value=400, step=50)
-subcontractor_cost = st.sidebar.number_input("Subcontractor Cost ($)", min_value=0, max_value=10000, value=800, step=100)
-rework_probability = st.sidebar.slider("Rework Probability (%)", min_value=0, max_value=50, value=15)
+tooling_cost        = st.sidebar.number_input("Tooling/Consumables ($)", min_value=50,  max_value=5000,  value=400, step=50)
+subcontractor_cost  = st.sidebar.number_input("Subcontractor Cost ($)",  min_value=0,   max_value=10000, value=800, step=100)
+rework_probability  = st.sidebar.slider("Rework Probability (%)", min_value=0, max_value=50, value=15)
 
 st.sidebar.subheader("📈 Business Factors")
-overhead_multiplier = st.sidebar.number_input("Overhead Multiplier", min_value=1.0, max_value=3.0, value=1.35, step=0.05)
-profit_margin = st.sidebar.number_input("Profit Margin Multiplier", min_value=1.0, max_value=2.0, value=1.15, step=0.05)
+overhead_multiplier = st.sidebar.number_input("Overhead Multiplier",      min_value=1.0, max_value=3.0, value=1.35, step=0.05)
+profit_margin       = st.sidebar.number_input("Profit Margin Multiplier", min_value=1.0, max_value=2.0, value=1.15, step=0.05)
 
-n_simulations = 10000
+n_simulations = 10_000
 
-# Text Report Generation
-def generate_text_report(job_name, results, params):
-    report = f"""
+# ── Helpers ─────────────────────────────────────────────────────────────────
+
+def run_simulation(mat_cost, mat_unc, waste_p, s_hrs, m_hrs, f_hrs, l_unc,
+                   l_rate, tool, sub, rework_prob, ovhd, profit, n=10_000):
+    mat_std   = mat_cost * (mat_unc / 100)
+    raw_mat   = np.random.normal(mat_cost, mat_std, n)
+    waste     = np.random.triangular(waste_p*0.5, waste_p, waste_p*2, n) / 100
+    mat_total = raw_mat * (1 + waste)
+
+    s_sim = np.random.normal(s_hrs, s_hrs * (l_unc/100), n)
+    m_sim = np.random.normal(m_hrs, m_hrs * (l_unc/100), n)
+    f_sim = np.random.normal(f_hrs, f_hrs * (l_unc/100), n)
+    total_hrs = s_sim + m_sim + f_sim
+    overtime  = np.random.random(n) < 0.10
+    eff_rate  = np.where(overtime, l_rate * 1.5, l_rate)
+    labor     = total_hrs * eff_rate
+
+    needs_rework = np.random.random(n) < (rework_prob / 100)
+    rework_hrs   = np.where(needs_rework, np.random.uniform(5, 15, n), 0)
+    rework       = rework_hrs * l_rate
+
+    direct = mat_total + labor + tool + sub + rework
+    quote  = direct * ovhd * profit
+    return quote, mat_total, labor, rework, direct
+
+
+def build_results(quote, mat_total, labor, rework, direct):
+    return {
+        'mean':        quote.mean(),
+        'median':      np.percentile(quote, 50),
+        'p10':         np.percentile(quote, 10),
+        'p25':         np.percentile(quote, 25),
+        'p75':         np.percentile(quote, 75),
+        'p90':         np.percentile(quote, 90),
+        'min':         quote.min(),
+        'max':         quote.max(),
+        'avg_material': mat_total.mean(),
+        'avg_labor':    labor.mean(),
+        'avg_rework':   rework.mean(),
+        'avg_direct':   direct.mean(),
+    }
+
+
+def generate_text_report(jname, results, params):
+    return f"""
 MANUFACTURING QUOTE RISK ANALYSIS REPORT
 {'='*60}
 
-Job Name: {job_name if job_name else 'Untitled Job'}
+Job Name: {jname if jname else 'Untitled Job'}
 Date Generated: {datetime.now().strftime('%Y-%m-%d %H:%M')}
 
 {'='*60}
@@ -145,24 +185,19 @@ High Confidence (90%):  ${results['p90']:>12,.0f}
 QUOTING RECOMMENDATIONS
 {'='*60}
 
-🎯 COMPETITIVE QUOTE (50% confidence): ${results['median']:,.0f}
-   - Use for: Competitive bidding, repeat customers
-   - Risk: 50/50 chance of cost overrun
-
-✅ CONSERVATIVE QUOTE (75% confidence): ${results['p75']:,.0f}
-   - Use for: New customers, complex jobs
-   - Risk Premium: ${results['p75'] - results['median']:,.0f}
-   - Only 25% chance of exceeding this price
+🎯 COMPETITIVE QUOTE (50%): ${results['median']:,.0f}
+✅ CONSERVATIVE QUOTE (75%): ${results['p75']:,.0f}
+   Risk Premium: ${results['p75'] - results['median']:,.0f}
 
 {'='*60}
 DETAILED STATISTICS
 {'='*60}
 
-10th Percentile:        ${results['p10']:>12,.0f}  (10% of outcomes below)
-25th Percentile:        ${results['p25']:>12,.0f}  (25% of outcomes below)
-50th Percentile:        ${results['median']:>12,.0f}  (Median - half above/below)
-75th Percentile:        ${results['p75']:>12,.0f}  (75% of outcomes below)
-90th Percentile:        ${results['p90']:>12,.0f}  (90% of outcomes below)
+10th Percentile: ${results['p10']:>12,.0f}
+25th Percentile: ${results['p25']:>12,.0f}
+50th Percentile: ${results['median']:>12,.0f}
+75th Percentile: ${results['p75']:>12,.0f}
+90th Percentile: ${results['p90']:>12,.0f}
 
 {'='*60}
 COST BREAKDOWN (Average Values)
@@ -177,228 +212,565 @@ Rework:                 ${results['avg_rework']:>12,.0f}
 Direct Costs:           ${results['avg_direct']:>12,.0f}
 After Overhead & Profit:${results['mean']:>12,.0f}
 
-{'='*60}
-
 Generated by Manufacturing Quote Risk Analyzer
 Monte Carlo Simulation with 10,000 iterations
-    """
-    return report
-    
-# Check if user can run analysis
-can_run = st.session_state['is_pro'] or st.session_state['usage_count'] < 3
+"""
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+#  PAYWALL SCREEN  — shown when free tier is exhausted
+# ══════════════════════════════════════════════════════════════════════════════
+can_run = is_pro or st.session_state['usage_count'] < 3
 
 if not can_run:
-    st.error("🚫 You've used all 3 free analyses!")
-    st.markdown("### Upgrade to Pro for Unlimited Access")
-    col1, col2 = st.columns(2)
-    with col1:
-        st.markdown("*Free Tier:*")
-        st.markdown("- 3 analyses/month")
-        st.markdown("- Text reports")
-        st.markdown("- Basic features")
-    with col2:
-        st.markdown("*Pro Tier - $49.99/month:*")
-        st.markdown("- ✅ Unlimited analyses")
-        st.markdown("- ✅ PDF reports with charts")
-        st.markdown("- ✅ Save scenarios")
-        st.markdown("- ✅ Priority support")
-    st.markdown("[*Subscribe to Pro →*](https://buy.stripe.com/dRm4gz7DW7bmaFSche8k800)")
+
+    st.markdown("""
+    <style>
+    /* Card grid */
+    .pro-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.2rem; margin: 1.5rem 0 2rem; }
+
+    /* Individual feature card */
+    .pro-card {
+        background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+        border: 1px solid rgba(255,255,255,0.08);
+        border-radius: 14px;
+        padding: 1.6rem;
+    }
+    .pro-card-accent-orange { border-top: 3px solid #FF6B35; }
+    .pro-card-accent-green  { border-top: 3px solid #00C9A7; }
+    .pro-card-accent-purple { border-top: 3px solid #8B7CF6; }
+
+    .pro-tag {
+        display: inline-block;
+        font-size: 0.65rem;
+        font-weight: 700;
+        letter-spacing: 0.1em;
+        padding: 2px 10px;
+        border-radius: 20px;
+        margin-bottom: 0.75rem;
+    }
+    .tag-orange { background: rgba(255,107,53,0.15); color: #FF6B35; }
+    .tag-green  { background: rgba(0,201,167,0.15);  color: #00C9A7; }
+    .tag-purple { background: rgba(139,124,246,0.15);color: #8B7CF6; }
+
+    .pro-card h4 { font-size: 1.1rem; margin: 0 0 0.5rem; }
+    .pro-card p  { font-size: 0.85rem; color: #aaa; line-height: 1.6; margin: 0 0 0.8rem; }
+    .pro-card ul { padding-left: 1rem; margin: 0; }
+    .pro-card ul li { font-size: 0.82rem; color: #ccc; margin-bottom: 4px; }
+
+    /* Pricing row */
+    .price-row { display: grid; grid-template-columns: 1fr 1.1fr 1fr; gap: 1rem; margin: 1.5rem 0; }
+    .price-card {
+        border: 1px solid rgba(255,255,255,0.08);
+        border-radius: 12px;
+        padding: 1.4rem;
+        text-align: center;
+        background: rgba(255,255,255,0.02);
+    }
+    .price-card.hot {
+        border: 1.5px solid #FF6B35;
+        background: rgba(255,107,53,0.06);
+    }
+    .price-card .plan-name { font-size: 0.7rem; letter-spacing: 0.12em; color: #888; margin-bottom: 4px; }
+    .price-card .plan-price { font-size: 2rem; font-weight: 800; margin: 0; }
+    .price-card .plan-desc  { font-size: 0.75rem; color: #888; margin-bottom: 0.8rem; }
+    .price-card ul { list-style: none; padding: 0; margin: 0; text-align: left; }
+    .price-card ul li { font-size: 0.8rem; color: #bbb; padding: 3px 0; }
+    .price-card ul li::before { content: "✓ "; color: #00C9A7; }
+    .hot-badge {
+        display: inline-block;
+        background: #FF6B35;
+        color: #fff;
+        font-size: 0.65rem;
+        font-weight: 700;
+        letter-spacing: 0.1em;
+        padding: 2px 12px;
+        border-radius: 20px;
+        margin-bottom: 8px;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
+    # ── Header ──
+    st.title("🔧 Manufacturing Quote Risk Analyzer")
+    st.markdown("---")
+
+    col_lock, col_txt = st.columns([1, 5])
+    with col_lock:
+        st.markdown("## 🔒")
+    with col_txt:
+        st.markdown("## You've used all 3 free analyses")
+        st.markdown("Upgrade to **Pro** to keep analyzing — plus unlock three powerful features below.")
+
+    st.markdown("---")
+
+    # ── 3 Pro Feature Cards ──
+    st.markdown("### 🚀 What You Get with Pro")
+
+    st.markdown("""
+    <div class="pro-grid">
+
+      <div class="pro-card pro-card-accent-orange">
+        <span class="pro-tag tag-orange">✦ PRO FEATURE 1</span>
+        <h4>📄 PDF Reports with Charts</h4>
+        <p>Download a full branded PDF after every analysis — complete with your cost distribution histogram, percentile table, and quoting recommendations. Share-ready for customers and management.</p>
+        <ul>
+          <li>Cost distribution chart included</li>
+          <li>Branded header with job name & date</li>
+          <li>One-click download, every time</li>
+        </ul>
+      </div>
+
+      <div class="pro-card pro-card-accent-green">
+        <span class="pro-tag tag-green">✦ PRO FEATURE 2</span>
+        <h4>💾 Save & Compare Scenarios</h4>
+        <p>Save multiple job scenarios in-session and compare them side-by-side. Instantly see which quote is highest-risk, which is most profitable, and how they stack up on every percentile.</p>
+        <ul>
+          <li>Save unlimited named scenarios</li>
+          <li>Side-by-side comparison table</li>
+          <li>Export all scenarios to CSV</li>
+        </ul>
+      </div>
+
+      <div class="pro-card pro-card-accent-purple">
+        <span class="pro-tag tag-purple">✦ PRO FEATURE 3</span>
+        <h4>📊 Sensitivity Analysis</h4>
+        <p>Find out which input drives your cost risk the most. A tornado chart ranks every variable — material, labor, rework, overtime — by its impact on your final quote range.</p>
+        <ul>
+          <li>Tornado chart (ranked by impact)</li>
+          <li>% contribution per cost driver</li>
+          <li>Actionable insight into your biggest risks</li>
+        </ul>
+      </div>
+
+    </div>
+    """, unsafe_allow_html=True)
+
+    st.markdown("---")
+
+    # ── Pricing ──
+    st.markdown("### 💳 Choose Your Plan")
+
+    st.markdown("""
+    <div class="price-row">
+
+      <div class="price-card">
+        <div class="plan-name">STARTER FREE</div>
+        <div class="plan-price">$0</div>
+        <div class="plan-desc">Try it out</div>
+        <ul>
+          <li>3 analyses / month</li>
+          <li>Text report download</li>
+          <li>All input parameters</li>
+        </ul>
+      </div>
+
+      <div class="price-card hot">
+        <div class="hot-badge">MOST POPULAR</div>
+        <div class="plan-name">PRO</div>
+        <div class="plan-price">$49.99<span style="font-size:1rem;font-weight:400">/mo</span></div>
+        <div class="plan-desc">For active shops</div>
+        <ul>
+          <li>Unlimited analyses</li>
+          <li>PDF reports with charts</li>
+          <li>Save & compare scenarios</li>
+          <li>Sensitivity / tornado chart</li>
+          <li>Priority email support</li>
+        </ul>
+      </div>
+
+      <div class="price-card">
+        <div class="plan-name">ENTERPRISE</div>
+        <div class="plan-price" style="font-size:1.5rem">Custom</div>
+        <div class="plan-desc">Multi-user teams</div>
+        <ul>
+          <li>Everything in Pro</li>
+          <li>Team accounts</li>
+          <li>Custom integrations</li>
+          <li>Dedicated support</li>
+        </ul>
+      </div>
+
+    </div>
+    """, unsafe_allow_html=True)
+
+    col_btn, col_info = st.columns([1, 2])
+    with col_btn:
+        st.link_button("🚀 Subscribe to Pro — $49.99/mo",
+                       "https://buy.stripe.com/dRm4gz7DW7bmaFSche8k800",
+                       type="primary", use_container_width=True)
+    with col_info:
+        st.markdown("After subscribing, email **falconmanagementllc25@gmail.com** for your access code, then enter it in the sidebar to unlock Pro instantly.")
+
+    st.markdown("---")
+    st.markdown(
+        "<center><small>Manufacturing Quote Risk Analyzer v2.1 &nbsp;|&nbsp; "
+        "Built with Monte Carlo simulation &nbsp;|&nbsp; "
+        "Questions? falconmanagementllc25@gmail.com</small></center>",
+        unsafe_allow_html=True
+    )
     st.stop()
 
-# Main App Logic
-if st.sidebar.button("🚀 Run Risk Analysis", type="primary"):
 
-    # Increment usage counter for free users
-    if not st.session_state['is_pro']:
+# ══════════════════════════════════════════════════════════════════════════════
+#  MAIN APP  (free users with remaining analyses, or Pro)
+# ══════════════════════════════════════════════════════════════════════════════
+st.title("🔧 Manufacturing Quote Risk Analyzer")
+st.markdown("*Get data-driven confidence intervals for your manufacturing quotes*")
+st.markdown("---")
+
+# ── PRO FEATURE 2 : Scenario Manager (sidebar) ─────────────────────────────
+if is_pro:
+    st.sidebar.markdown("---")
+    st.sidebar.subheader("💾 Saved Scenarios")
+    if st.session_state['saved_scenarios']:
+        st.sidebar.caption(f"{len(st.session_state['saved_scenarios'])} scenario(s) saved")
+    else:
+        st.sidebar.caption("No scenarios saved yet. Run an analysis and save it!")
+
+# ── Run button ──────────────────────────────────────────────────────────────
+run_clicked = st.sidebar.button("🚀 Run Risk Analysis", type="primary")
+
+if run_clicked:
+
+    if not is_pro:
         st.session_state['usage_count'] += 1
 
-    with st.spinner("Running Monte Carlo simulation..."):
-        
-        # Material simulation
-        mat_std = material_cost * (material_uncertainty / 100)
-        raw_material = np.random.normal(material_cost, mat_std, n_simulations)
-        waste = np.random.triangular(waste_pct*0.5, waste_pct, waste_pct*2, n_simulations) / 100
-        material_total = raw_material * (1 + waste)
-        
-        # Labor simulation
-        setup_std = setup_hours * (labor_uncertainty / 100)
-        machining_std = machining_hours * (labor_uncertainty / 100)
-        finishing_std = finishing_hours * (labor_uncertainty / 100)
-        
-        setup_sim = np.random.normal(setup_hours, setup_std, n_simulations)
-        machining_sim = np.random.normal(machining_hours, machining_std, n_simulations)
-        finishing_sim = np.random.normal(finishing_hours, finishing_std, n_simulations)
-        
-        total_labor_hours = setup_sim + machining_sim + finishing_sim
-        
-        # Overtime risk
-        overtime = np.random.random(n_simulations) < 0.10
-        effective_rate = np.where(overtime, labor_rate * 1.5, labor_rate)
-        labor_cost = total_labor_hours * effective_rate
-        
-        # Rework simulation
-        needs_rework = np.random.random(n_simulations) < (rework_probability / 100)
-        rework_hours = np.where(needs_rework, np.random.uniform(5, 15, n_simulations), 0)
-        rework_cost = rework_hours * labor_rate
-        
-        # Total cost
-        direct_costs = material_total + labor_cost + tooling_cost + subcontractor_cost + rework_cost
-        total_quote = direct_costs * overhead_multiplier * profit_margin
-        
-        # Calculate statistics
-        mean_cost = total_quote.mean()
-        median_cost = np.percentile(total_quote, 50)
-        p10 = np.percentile(total_quote, 10)
-        p25 = np.percentile(total_quote, 25)
-        p75 = np.percentile(total_quote, 75)
-        p90 = np.percentile(total_quote, 90)
-        
-        # Store results
-        results = {
-            'mean': mean_cost,
-            'median': median_cost,
-            'p10': p10,
-            'p25': p25,
-            'p75': p75,
-            'p90': p90,
-            'avg_material': material_total.mean(),
-            'avg_labor': labor_cost.mean(),
-            'avg_rework': rework_cost.mean(),
-            'avg_direct': direct_costs.mean()
-        }
-        
-        params = {
-            'material_cost': material_cost,
-            'material_uncertainty': material_uncertainty,
-            'waste_pct': waste_pct,
-            'setup_hours': setup_hours,
-            'machining_hours': machining_hours,
-            'finishing_hours': finishing_hours,
-            'labor_rate': labor_rate,
-            'labor_uncertainty': labor_uncertainty,
-            'tooling_cost': tooling_cost,
-            'subcontractor_cost': subcontractor_cost,
-            'rework_probability': rework_probability,
-            'overhead_multiplier': overhead_multiplier,
-            'profit_margin': profit_margin
-        }
-        
-        st.session_state['results'] = results
-        st.session_state['params'] = params
-        st.session_state['total_quote'] = total_quote
-        
+    with st.spinner("Running Monte Carlo simulation…"):
+        quote, mat_total, labor, rework, direct = run_simulation(
+            material_cost, material_uncertainty, waste_pct,
+            setup_hours, machining_hours, finishing_hours,
+            labor_uncertainty, labor_rate,
+            tooling_cost, subcontractor_cost, rework_probability,
+            overhead_multiplier, profit_margin
+        )
+        results = build_results(quote, mat_total, labor, rework, direct)
+        params  = dict(
+            material_cost=material_cost, material_uncertainty=material_uncertainty,
+            waste_pct=waste_pct, setup_hours=setup_hours, machining_hours=machining_hours,
+            finishing_hours=finishing_hours, labor_rate=labor_rate,
+            labor_uncertainty=labor_uncertainty, tooling_cost=tooling_cost,
+            subcontractor_cost=subcontractor_cost, rework_probability=rework_probability,
+            overhead_multiplier=overhead_multiplier, profit_margin=profit_margin,
+        )
+
+        st.session_state['results']     = results
+        st.session_state['params']      = params
+        st.session_state['total_quote'] = quote
+        st.session_state['job_name']    = job_name
+
     st.success("✅ Analysis Complete!")
-    
-    # Key Results
+
+# ── Display results if available ────────────────────────────────────────────
+if 'results' in st.session_state:
+    results   = st.session_state['results']
+    params    = st.session_state['params']
+    quote     = st.session_state['total_quote']
+    j_name    = st.session_state.get('job_name', '')
+
+    # Key metrics
     st.subheader("📊 Key Results")
-    col1, col2, col3, col4 = st.columns(4)
-    
-    with col1:
-        st.metric("Expected Cost", f"${mean_cost:,.0f}")
-    with col2:
-        st.metric("Median (50%)", f"${median_cost:,.0f}")
-    with col3:
-        st.metric("Conservative (75%)", f"${p75:,.0f}", delta=f"+${p75-median_cost:,.0f}")
-    with col4:
-        st.metric("High Confidence (90%)", f"${p90:,.0f}", delta=f"+${p90-median_cost:,.0f}")
-    
+    c1, c2, c3, c4 = st.columns(4)
+    c1.metric("Expected Cost",        f"${results['mean']:,.0f}")
+    c2.metric("Median (50%)",         f"${results['median']:,.0f}")
+    c3.metric("Conservative (75%)",   f"${results['p75']:,.0f}", delta=f"+${results['p75']-results['median']:,.0f}")
+    c4.metric("High Confidence (90%)",f"${results['p90']:,.0f}", delta=f"+${results['p90']-results['median']:,.0f}")
+
     # Distribution chart
     st.subheader("📈 Cost Distribution")
-
-    # Create histogram bins
-    hist_values, bin_edges = np.histogram(total_quote, bins=50)
+    hist_values, bin_edges = np.histogram(quote, bins=50)
     bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2
-
-    # Create dataframe for chart
-    hist_df = pd.DataFrame({'Cost Range' : [f"${int(x):,}" for x in bin_centers],'Frequency': hist_values})
-
+    hist_df = pd.DataFrame({'Cost Range': [f"${int(x):,}" for x in bin_centers], 'Frequency': hist_values})
     st.bar_chart(hist_df.set_index('Cost Range')['Frequency'], height=400)
 
-    # Add summary stats below chart
-    col_a, col_b, col_c = st.columns(3)
-    with col_a:
-        st.metric("Minimum", f"${total_quote.min():,.0f}")
-    with col_b:
-        st.metric("Average", f"${total_quote.mean():,.0f}")
-    with col_c:
-        st.metric("Maximum", f"${total_quote.max():,.0f}")
-    
+    ca, cb, cc = st.columns(3)
+    ca.metric("Minimum", f"${results['min']:,.0f}")
+    cb.metric("Average", f"${results['mean']:,.0f}")
+    cc.metric("Maximum", f"${results['max']:,.0f}")
+
     # Recommendations
     st.subheader("💡 Quoting Recommendations")
-    
-    rec_col1, rec_col2 = st.columns(2)
-    
-    with rec_col1:
-        st.info(f"🎯 COMPETITIVE QUOTE**\n\n### ${median_cost:,.0f}\n\n- 50% confidence level\n- Use for: Competitive bidding\n- Risk: 50/50 chance of overrun")
-    
-    with rec_col2:
-        st.success(f"✅ CONSERVATIVE QUOTE**\n\n### ${p75:,.0f}\n\n- 75% confidence level\n- Use for: New customers, complex jobs\n- Risk premium: ${p75-median_cost:,.0f}")
-    
-    # Statistics table
+    r1, r2 = st.columns(2)
+    r1.info(f"🎯 **COMPETITIVE QUOTE**\n\n### ${results['median']:,.0f}\n\n- 50% confidence level\n- Use for: Competitive bidding\n- Risk: 50/50 chance of overrun")
+    r2.success(f"✅ **CONSERVATIVE QUOTE**\n\n### ${results['p75']:,.0f}\n\n- 75% confidence level\n- Use for: New customers, complex jobs\n- Risk premium: ${results['p75']-results['median']:,.0f}")
+
+    # Stats table
     st.subheader("📋 Detailed Statistics")
     stats_df = pd.DataFrame({
-        'Percentile': ['10th', '25th', '50th (Median)', '75th', '90th'],
-        'Quote Price': [f"${p10:,.0f}", f"${p25:,.0f}", f"${median_cost:,.0f}", f"${p75:,.0f}", f"${p90:,.0f}"]
+        'Percentile': ['10th','25th','50th (Median)','75th','90th'],
+        'Quote Price': [f"${results[k]:,.0f}" for k in ['p10','p25','median','p75','p90']]
     })
     st.dataframe(stats_df, use_container_width=True, hide_index=True)
-    
-    # Cost Breakdown
+
+    # Cost breakdown
     st.subheader("💵 Average Cost Breakdown")
-    breakdown_df = pd.DataFrame({
-        'Component': ['Material (w/ waste)', 'Labor', 'Tooling', 'Subcontractor', 'Rework', 'Total Direct'],
+    bd_df = pd.DataFrame({
+        'Component': ['Material (w/ waste)','Labor','Tooling','Subcontractor','Rework','Total Direct'],
         'Cost': [
-            f"${material_total.mean():,.0f}",
-            f"${labor_cost.mean():,.0f}",
-            f"${tooling_cost:,.0f}",
-            f"${subcontractor_cost:,.0f}",
-            f"${rework_cost.mean():,.0f}",
-            f"${direct_costs.mean():,.0f}"
+            f"${results['avg_material']:,.0f}", f"${results['avg_labor']:,.0f}",
+            f"${params['tooling_cost']:,.0f}",  f"${params['subcontractor_cost']:,.0f}",
+            f"${results['avg_rework']:,.0f}",   f"${results['avg_direct']:,.0f}",
         ]
     })
-    st.dataframe(breakdown_df, use_container_width=True, hide_index=True)
-    
-    # Text Report Download
+    st.dataframe(bd_df, use_container_width=True, hide_index=True)
+
+    # ── Export section ──────────────────────────────────────────────────────
     st.subheader("📄 Export Report")
-    text_report = generate_text_report(job_name if job_name else "Untitled Job", results, params)
-    
-    st.download_button(
-        label="⬇ Download Text Report",
-        data=text_report,
-        file_name=f"risk_analysis_{job_name.replace(' ', '') if job_name else 'report'}{datetime.now().strftime('%Y%m%d')}.txt",
-        mime="text/plain",
-        type="primary"
-    )
+
+    if is_pro:
+        # ── PRO FEATURE 1 : PDF-style HTML report download ─────────────────
+        tab1, tab2 = st.tabs(["📄 Text Report", "🖨️ Print / PDF Report"])
+
+        with tab1:
+            text_report = generate_text_report(j_name, results, params)
+            st.download_button(
+                label="⬇ Download Text Report",
+                data=text_report,
+                file_name=f"risk_analysis_{(j_name or 'report').replace(' ','')}{datetime.now().strftime('%Y%m%d')}.txt",
+                mime="text/plain",
+                type="primary"
+            )
+
+        with tab2:
+            st.markdown("**Pro PDF Report** — Click below to open a print-ready page, then use your browser's *Print → Save as PDF*.")
+
+            html_report = f"""<!DOCTYPE html>
+<html><head><meta charset='utf-8'>
+<title>Risk Report — {j_name or 'Untitled'}</title>
+<style>
+  body {{ font-family: Arial, sans-serif; max-width: 820px; margin: 40px auto; color: #222; }}
+  h1 {{ color: #2c3e50; border-bottom: 2px solid #FF6B35; padding-bottom: 8px; }}
+  h2 {{ color: #34495e; margin-top: 28px; }}
+  table {{ border-collapse: collapse; width: 100%; margin: 12px 0; }}
+  th {{ background: #2c3e50; color: #fff; padding: 8px 12px; text-align: left; }}
+  td {{ padding: 7px 12px; border-bottom: 1px solid #eee; }}
+  tr:nth-child(even) td {{ background: #f9f9f9; }}
+  .badge {{ display: inline-block; padding: 4px 14px; border-radius: 20px; font-weight: bold; font-size: 0.9rem; }}
+  .comp  {{ background: #ebf5fb; color: #1a6fa8; }}
+  .cons  {{ background: #eafaf1; color: #1e8449; }}
+  .footer {{ margin-top: 40px; font-size: 0.8rem; color: #999; border-top: 1px solid #eee; padding-top: 12px; }}
+</style>
+</head><body>
+<h1>🔧 Manufacturing Quote Risk Analysis</h1>
+<p><strong>Job:</strong> {j_name or 'Untitled'} &nbsp;&nbsp; <strong>Date:</strong> {datetime.now().strftime('%Y-%m-%d %H:%M')}</p>
+
+<h2>Key Results</h2>
+<table>
+  <tr><th>Metric</th><th>Value</th></tr>
+  <tr><td>Expected (Mean) Cost</td><td>${results['mean']:,.0f}</td></tr>
+  <tr><td>Median (50th pct)</td><td>${results['median']:,.0f}</td></tr>
+  <tr><td>Conservative (75th pct)</td><td>${results['p75']:,.0f}</td></tr>
+  <tr><td>High Confidence (90th pct)</td><td>${results['p90']:,.0f}</td></tr>
+</table>
+
+<h2>Quoting Recommendations</h2>
+<p><span class="badge comp">🎯 Competitive: ${results['median']:,.0f}</span> &nbsp;
+   <span class="badge cons">✅ Conservative: ${results['p75']:,.0f}</span></p>
+
+<h2>Full Percentile Table</h2>
+<table>
+  <tr><th>Percentile</th><th>Quote Price</th></tr>
+  <tr><td>10th</td><td>${results['p10']:,.0f}</td></tr>
+  <tr><td>25th</td><td>${results['p25']:,.0f}</td></tr>
+  <tr><td>50th (Median)</td><td>${results['median']:,.0f}</td></tr>
+  <tr><td>75th</td><td>${results['p75']:,.0f}</td></tr>
+  <tr><td>90th</td><td>${results['p90']:,.0f}</td></tr>
+</table>
+
+<h2>Average Cost Breakdown</h2>
+<table>
+  <tr><th>Component</th><th>Cost</th></tr>
+  <tr><td>Material (with waste)</td><td>${results['avg_material']:,.0f}</td></tr>
+  <tr><td>Labor</td><td>${results['avg_labor']:,.0f}</td></tr>
+  <tr><td>Tooling / Consumables</td><td>${params['tooling_cost']:,.0f}</td></tr>
+  <tr><td>Subcontractor</td><td>${params['subcontractor_cost']:,.0f}</td></tr>
+  <tr><td>Rework</td><td>${results['avg_rework']:,.0f}</td></tr>
+  <tr><td><strong>Direct Costs</strong></td><td><strong>${results['avg_direct']:,.0f}</strong></td></tr>
+  <tr><td><strong>After Overhead & Profit</strong></td><td><strong>${results['mean']:,.0f}</strong></td></tr>
+</table>
+
+<div class="footer">Generated by Manufacturing Quote Risk Analyzer v2.1 &nbsp;|&nbsp; Monte Carlo simulation (10,000 iterations) &nbsp;|&nbsp; falconmanagementllc25@gmail.com</div>
+</body></html>"""
+
+            st.download_button(
+                label="⬇ Download Print-Ready HTML Report",
+                data=html_report,
+                file_name=f"risk_report_{(j_name or 'report').replace(' ','')}{datetime.now().strftime('%Y%m%d')}.html",
+                mime="text/html",
+                type="primary"
+            )
+            st.caption("Open the downloaded file in any browser and press Ctrl+P (Cmd+P on Mac) → Save as PDF.")
+
+    else:
+        # Free tier: text only
+        text_report = generate_text_report(j_name, results, params)
+        st.download_button(
+            label="⬇ Download Text Report",
+            data=text_report,
+            file_name=f"risk_analysis_{(j_name or 'report').replace(' ','')}{datetime.now().strftime('%Y%m%d')}.txt",
+            mime="text/plain",
+            type="primary"
+        )
+        st.info("🔒 **Pro Feature:** PDF reports with charts available with Pro subscription.")
+
+    # ── PRO FEATURE 2 : Save Scenario ──────────────────────────────────────
+    if is_pro:
+        st.markdown("---")
+        st.subheader("💾 Save & Compare Scenarios")
+
+        save_col, _ = st.columns([1, 2])
+        with save_col:
+            scenario_label = st.text_input(
+                "Scenario name (to save)",
+                value=j_name or f"Scenario {len(st.session_state['saved_scenarios'])+1}"
+            )
+            if st.button("💾 Save This Scenario"):
+                st.session_state['saved_scenarios'][scenario_label] = {
+                    'median': results['median'], 'p75': results['p75'],
+                    'p90': results['p90'], 'mean': results['mean'],
+                    'avg_material': results['avg_material'], 'avg_labor': results['avg_labor'],
+                    'avg_rework': results['avg_rework'],
+                    'saved_at': datetime.now().strftime('%H:%M')
+                }
+                st.success(f"✅ Saved as '{scenario_label}'")
+
+        if st.session_state['saved_scenarios']:
+            st.markdown("**Saved Scenario Comparison**")
+            comp_rows = []
+            for name, s in st.session_state['saved_scenarios'].items():
+                comp_rows.append({
+                    'Scenario': name,
+                    'Competitive (50%)': f"${s['median']:,.0f}",
+                    'Conservative (75%)': f"${s['p75']:,.0f}",
+                    'High Conf. (90%)': f"${s['p90']:,.0f}",
+                    'Expected': f"${s['mean']:,.0f}",
+                    'Saved': s['saved_at'],
+                })
+            st.dataframe(pd.DataFrame(comp_rows), use_container_width=True, hide_index=True)
+
+            # CSV export
+            csv_rows = []
+            for name, s in st.session_state['saved_scenarios'].items():
+                csv_rows.append({'Scenario': name, **{k: v for k, v in s.items() if k != 'saved_at'}})
+            csv_data = pd.DataFrame(csv_rows).to_csv(index=False)
+            st.download_button("⬇ Export All Scenarios (CSV)", csv_data,
+                               "scenarios.csv", "text/csv")
+
+            if st.button("🗑 Clear All Saved Scenarios"):
+                st.session_state['saved_scenarios'] = {}
+                st.rerun()
+
+    else:
+        st.info("🔒 **Pro Feature:** Save & compare multiple job scenarios — available with Pro subscription.")
+
+    # ── PRO FEATURE 3 : Sensitivity / Tornado Chart ────────────────────────
+    st.markdown("---")
+    st.subheader("📊 Sensitivity Analysis")
+
+    if is_pro:
+        st.markdown("Which input drives your cost risk the most? Each variable is shocked ±20% while others are held fixed.")
+
+        base_quote, *_ = run_simulation(
+            material_cost, material_uncertainty, waste_pct,
+            setup_hours, machining_hours, finishing_hours,
+            labor_uncertainty, labor_rate,
+            tooling_cost, subcontractor_cost, rework_probability,
+            overhead_multiplier, profit_margin
+        )
+        base_mean = base_quote.mean()
+
+        sensitivities = {}
+        shock = 0.20
+
+        def _mean(mc, mu, wp, sh, mh, fh, lu, lr, tc, sc, rp, om, pm):
+            q, *_ = run_simulation(mc, mu, wp, sh, mh, fh, lu, lr, tc, sc, rp, om, pm, n=3000)
+            return q.mean()
+
+        cases = {
+            "Material Cost":        lambda d: _mean(material_cost*(1+d), material_uncertainty, waste_pct, setup_hours, machining_hours, finishing_hours, labor_uncertainty, labor_rate, tooling_cost, subcontractor_cost, rework_probability, overhead_multiplier, profit_margin),
+            "Labor Rate":           lambda d: _mean(material_cost, material_uncertainty, waste_pct, setup_hours, machining_hours, finishing_hours, labor_uncertainty, labor_rate*(1+d), tooling_cost, subcontractor_cost, rework_probability, overhead_multiplier, profit_margin),
+            "Machining Hours":      lambda d: _mean(material_cost, material_uncertainty, waste_pct, setup_hours, machining_hours*(1+d), finishing_hours, labor_uncertainty, labor_rate, tooling_cost, subcontractor_cost, rework_probability, overhead_multiplier, profit_margin),
+            "Rework Probability":   lambda d: _mean(material_cost, material_uncertainty, waste_pct, setup_hours, machining_hours, finishing_hours, labor_uncertainty, labor_rate, tooling_cost, subcontractor_cost, min(100, rework_probability*(1+d)), overhead_multiplier, profit_margin),
+            "Overhead Multiplier":  lambda d: _mean(material_cost, material_uncertainty, waste_pct, setup_hours, machining_hours, finishing_hours, labor_uncertainty, labor_rate, tooling_cost, subcontractor_cost, rework_probability, overhead_multiplier*(1+d), profit_margin),
+            "Material Uncertainty": lambda d: _mean(material_cost, min(40, material_uncertainty*(1+d)), waste_pct, setup_hours, machining_hours, finishing_hours, labor_uncertainty, labor_rate, tooling_cost, subcontractor_cost, rework_probability, overhead_multiplier, profit_margin),
+        }
+
+        for label, fn in cases.items():
+            hi = fn(shock)
+            lo = fn(-shock)
+            sensitivities[label] = abs(hi - lo)
+
+        sens_df = (
+            pd.DataFrame.from_dict(sensitivities, orient='index', columns=['Impact ($)'])
+            .sort_values('Impact ($)', ascending=True)
+        )
+
+        st.bar_chart(sens_df, height=320)
+        st.caption("Bar length = total swing in expected quote when input is raised/lowered 20%. Longer bar = bigger risk driver.")
+
+        sens_pct = sens_df.copy()
+        sens_pct['% of Total Swing'] = (sens_pct['Impact ($)'] / sens_pct['Impact ($)'].sum() * 100).round(1)
+        sens_pct['Impact ($)'] = sens_pct['Impact ($)'].apply(lambda x: f"${x:,.0f}")
+        st.dataframe(sens_pct.sort_values('% of Total Swing', ascending=False), use_container_width=True)
+
+    else:
+        st.info("🔒 **Pro Feature:** Sensitivity / tornado chart — see which input drives your cost risk most. Available with Pro subscription.")
+        st.markdown("[**Upgrade to Pro →**](https://buy.stripe.com/dRm4gz7DW7bmaFSche8k800)")
 
 else:
-    st.info("👈 *Adjust parameters in sidebar and click 'Run Risk Analysis'*")
-    
+    # No results yet — welcome screen
+    st.info("👈 *Adjust parameters in the sidebar and click 'Run Risk Analysis'*")
     st.markdown("""
-    ### How to Use:
-    
-    1. Enter your job parameters in the sidebar
-    2. Optionally add a job name for the report
-    3. Click 'Run Risk Analysis'
-    4. Download detailed text report
-    
-    ### Features:
-    - ✅ Monte Carlo simulation (10,000 iterations)
-    - ✅ Multiple confidence levels (50%, 75%, 90%)
-    - ✅ Detailed cost breakdown
-    - ✅ Downloadable reports
-    - ✅ Conservative & competitive quotes
-    """)
+### How to Use:
+1. Enter your job parameters in the sidebar
+2. Optionally add a job name for the report
+3. Click **Run Risk Analysis**
+4. Download your detailed report
+
+### Features:
+- ✅ Monte Carlo simulation (10,000 iterations)
+- ✅ Multiple confidence levels (50%, 75%, 90%)
+- ✅ Detailed cost breakdown
+- ✅ Downloadable reports
+- ✅ Conservative & competitive quotes
+""")
+
+# ── Pro teaser banner — shown to free users on welcome screen AND after results
+if not is_pro:
+    st.markdown("---")
+    st.markdown("""
+<div style="background: linear-gradient(90deg, #fff8f5 0%, #f0f4ff 100%);
+            border: 1.5px solid #FF6B35;
+            border-radius: 12px;
+            padding: 20px 24px;
+            margin-top: 8px;">
+  <h4 style="margin: 0 0 6px; color: #c0410a;">⭐ Unlock More with Pro — $49.99/month</h4>
+  <p style="margin: 0 0 12px; color: #555; font-size: 0.9rem;">
+    You are on the free tier (3 analyses). Subscribe to Pro and get three powerful upgrades:
+  </p>
+  <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 14px;">
+    <div style="background: white; border-radius: 8px; padding: 12px; border: 1px solid #ffe0d0;">
+      <strong style="color: #c0410a;">📄 PDF Reports</strong><br>
+      <span style="font-size: 0.82rem; color: #666;">Branded, print-ready PDF with charts after every analysis</span>
+    </div>
+    <div style="background: white; border-radius: 8px; padding: 12px; border: 1px solid #d0eaff;">
+      <strong style="color: #1a5fa8;">💾 Save &amp; Compare Jobs</strong><br>
+      <span style="font-size: 0.82rem; color: #666;">Save multiple scenarios and compare quotes side-by-side</span>
+    </div>
+    <div style="background: white; border-radius: 8px; padding: 12px; border: 1px solid #e0d8ff;">
+      <strong style="color: #5b3fc4;">📊 Sensitivity Analysis</strong><br>
+      <span style="font-size: 0.82rem; color: #666;">See which cost driver puts your quote at the most risk</span>
+    </div>
+  </div>
+  <a href="https://buy.stripe.com/dRm4gz7DW7bmaFSche8k800"
+     target="_blank"
+     style="display: inline-block; background: #FF6B35; color: white; font-weight: 700;
+            padding: 9px 22px; border-radius: 8px; text-decoration: none; font-size: 0.9rem;">
+    🚀 Subscribe to Pro →
+  </a>
+  <span style="margin-left: 14px; font-size: 0.8rem; color: #999;">Cancel anytime · Email us for your access code</span>
+</div>
+""", unsafe_allow_html=True)
 
 st.markdown("---")
 st.markdown("Manufacturing Quote Risk Analyzer v2.1 | Built with Monte Carlo simulation")
-
-
-
-
-
-
-
-
-
-
-
-
