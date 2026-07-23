@@ -50,7 +50,10 @@ else:
 if is_pro:
     st.sidebar.success("**PRO USER** — Unlimited analyses")
     st.sidebar.markdown("---")
-    st.sidebar.caption("Need to cancel or update payment?")
+    st.sidebar.caption("Need to cancel or update your subscription?")
+    st.sidebar.link_button("⚙️ Manage / Cancel Subscription",
+        "https://billing.stripe.com/p/login/dRm4gz7DW7bmaFSche8k800",
+        use_container_width=True)
     st.sidebar.caption("Questions? falconmanagementllc25@gmail.com")
 else:
     remaining = max(0, 3 - st.session_state['usage_count'])
