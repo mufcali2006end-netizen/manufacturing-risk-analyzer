@@ -31,7 +31,7 @@ VALID_PRO_CODES = [
 st.sidebar.title("🔧 Manufacturing Risk Analyzer")
 st.sidebar.markdown("---")
 st.sidebar.subheader("✨ Pro Access")
-st.sidebar.caption("After subscribing, email falconmanagementllc25@gmail.com for your access code")
+st.sidebar.caption("After subscribing, your Pro access code will be emailed to you automatically. Check your inbox!")
 
 pro_code = st.sidebar.text_input("Enter Pro Code:", type="password", key="pro_code_input")
 
@@ -50,7 +50,7 @@ if is_pro:
     st.sidebar.success("**PRO USER** — Unlimited analyses")
     st.sidebar.markdown("---")
     st.sidebar.caption("Need to cancel or update payment?")
-    st.sidebar.markdown("📧 Email: falconmanagementllc25@gmail.com")
+    st.sidebar.caption("Questions? falconmanagementllc25@gmail.com")
 else:
     remaining = max(0, 3 - st.session_state['usage_count'])
     if remaining > 0:
