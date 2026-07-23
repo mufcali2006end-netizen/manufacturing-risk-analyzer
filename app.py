@@ -26,6 +26,7 @@ if 'win_loss_log'     not in st.session_state: st.session_state['win_loss_log'] 
 VALID_PRO_CODES = [
     "DEMO2025",
     "ACME-SHOP-JAN2025",
+    "FALCON-X7K2-PRO",
 ]
 
 st.sidebar.title("🔧 Manufacturing Risk Analyzer")
