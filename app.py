@@ -818,7 +818,7 @@ if not is_pro:
             padding:9px 22px;border-radius:8px;text-decoration:none;font-size:0.9rem;">
     🚀 Subscribe to Pro →
   </a>
-  <span style="margin-left:14px;font-size:0.8rem;color:#999;">Cancel anytime · Email us for your access code</span>
+  <span style="margin-left:14px;font-size:0.8rem;color:#999;">Cancel anytime · Your access code is emailed automatically after subscribing</span>
 </div>
 """, unsafe_allow_html=True)
 
