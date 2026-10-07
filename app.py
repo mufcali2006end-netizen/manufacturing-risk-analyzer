@@ -23,11 +23,7 @@ if 'quote_templates'  not in st.session_state: st.session_state['quote_templates
 if 'win_loss_log'     not in st.session_state: st.session_state['win_loss_log']     = []   # PRO FEATURE 5
 
 # ── Pro code check ──────────────────────────────────────────────────────────
-VALID_PRO_CODES = [
-    "DEMO2025",
-    "ACME-SHOP-JAN2025",
-    "FALCON-X7K2-PRO",
-]
+VALID_PRO_CODES = st.secrets["pro_codes"]
 
 st.sidebar.title("🔧 Manufacturing Risk Analyzer")
 st.sidebar.markdown("---")
@@ -94,20 +90,20 @@ st.sidebar.header("📊 Job Parameters")
 job_name = st.sidebar.text_input("Job Name (optional)", placeholder="e.g., Bracket-2024-001")
 
 st.sidebar.subheader("💰 Material Costs")
-material_cost        = st.sidebar.number_input("Base Material Cost ($)",       min_value=100,  max_value=50000, value=tval('material_cost', 3500),        step=100)
+material_cost        = st.sidebar.number_input("Base Material Cost ($)",       min_value=100,  max_value=5000000, value=tval('material_cost', 3500),        step=100)
 material_uncertainty = st.sidebar.slider(      "Material Cost Uncertainty (%)", min_value=5,    max_value=40,    value=tval('material_uncertainty', 12))
 waste_pct            = st.sidebar.slider(      "Expected Material Waste (%)",   min_value=5,    max_value=30,    value=tval('waste_pct', 10))
 
 st.sidebar.subheader("⏱ Labor Estimates")
-setup_hours     = st.sidebar.number_input("Setup Time (hours)",     min_value=0.5, max_value=40.0,  value=tval('setup_hours', 4.0),      step=0.5)
-machining_hours = st.sidebar.number_input("Machining Time (hours)", min_value=1.0, max_value=500.0, value=tval('machining_hours', 35.0), step=1.0)
-finishing_hours = st.sidebar.number_input("Finishing Time (hours)", min_value=0.5, max_value=40.0,  value=tval('finishing_hours', 5.0),  step=0.5)
+setup_hours     = st.sidebar.number_input("Setup Time (hours)",     min_value=0.5, max_value=4000.0,  value=tval('setup_hours', 4.0),      step=0.5)
+machining_hours = st.sidebar.number_input("Machining Time (hours)", min_value=1.0, max_value=10000.0, value=tval('machining_hours', 35.0), step=1.0)
+finishing_hours = st.sidebar.number_input("Finishing Time (hours)", min_value=0.5, max_value=4000.0,  value=tval('finishing_hours', 5.0),  step=0.5)
 labor_uncertainty = st.sidebar.slider(   "Labor Time Uncertainty (%)", min_value=10, max_value=50,  value=tval('labor_uncertainty', 20))
-labor_rate       = st.sidebar.number_input("Labor Rate ($/hr)",    min_value=30,  max_value=200,   value=tval('labor_rate', 75),         step=5)
+labor_rate       = st.sidebar.number_input("Labor Rate ($/hr)",    min_value=30,  max_value=500,   value=tval('labor_rate', 75),         step=5)
 
 st.sidebar.subheader("🔩 Other Costs")
-tooling_cost       = st.sidebar.number_input("Tooling/Consumables ($)", min_value=50,  max_value=5000,  value=tval('tooling_cost', 400),       step=50)
-subcontractor_cost = st.sidebar.number_input("Subcontractor Cost ($)",  min_value=0,   max_value=10000, value=tval('subcontractor_cost', 800), step=100)
+tooling_cost       = st.sidebar.number_input("Tooling/Consumables ($)", min_value=50,  max_value=500000,  value=tval('tooling_cost', 400),       step=50)
+subcontractor_cost = st.sidebar.number_input("Subcontractor Cost ($)",  min_value=0,   max_value=1000000, value=tval('subcontractor_cost', 800), step=100)
 rework_probability = st.sidebar.slider(     "Rework Probability (%)",   min_value=0,   max_value=50,    value=tval('rework_probability', 15))
 
 st.sidebar.subheader("📈 Business Factors")
@@ -377,8 +373,7 @@ if not can_run:
                        "https://buy.stripe.com/dRm4gz7DW7bmaFSche8k800",
                        type="primary", use_container_width=True)
     with col_info:
-        st.markdown("After subscribing, email **falconmanagementllc25@gmail.com** for your access code, then enter it in the sidebar to unlock Pro instantly.")
-
+        st.markdown("After subscribing, your access code is emailed to you automatically. Enter it in the sidebar to unlock Pro instantly. Questions? falconmanagementllc25@gmail.com")
     st.markdown("---")
     st.markdown("<center><small>Manufacturing Quote Risk Analyzer v2.2 &nbsp;|&nbsp; Built with Monte Carlo simulation &nbsp;|&nbsp; Questions? falconmanagementllc25@gmail.com</small></center>", unsafe_allow_html=True)
     st.stop()
